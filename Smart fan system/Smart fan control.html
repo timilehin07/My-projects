@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Fan Control</title>
+    <style>
+        *,
+        *:before,
+        *:after {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            position: relative;
+            width: 350px;
+            height: 450px;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .fan {
+            height: 350px;
+            width: 350px;
+            position: absolute;
+            margin: auto;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        label {
+            display: block;
+            height: 20px;
+            width: 20px;
+            background-color: black;
+            position: absolute;
+            margin: 120px auto 0 auto;
+            left: 0;
+            right: 0;
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            animation-play-state: paused;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        label:after {
+            content: "";
+            position: absolute;
+            height: 70px;
+            width: 70px;
+            background-color: #005fe4;
+            border: 10px solid #00317e;
+            border-radius: 50%;
+            left: -25px;
+            bottom: -25px;
+        }
+
+        label span {
+            display: block;
+            height: 120px;
+            width: 70px;
+            background-color: green;
+            border-radius: 55% 45% 100% 0% / 39% 28% 72% 61%;
+            position: absolute;
+            z-index: -1;
+        }
+
+        span:nth-child(1) {
+            bottom: 10px;
+            left: 10px;
+        }
+
+        span:nth-child(2) {
+            transform: rotate(-120deg);
+            left: -95px;
+            top: -50px;
+        }
+
+        span:nth-child(3) {
+            transform: rotate(-240deg);
+            right: -60px;
+            top: 10px;
+        }
+
+        .base {
+            height: 160px;
+            width: 20px;
+            background-color: #00317e;
+            position: absolute;
+            margin: auto;
+            left: 0;
+            right: 0;
+            top: 140px;
+            z-index: -1;
+        }
+
+        .base:after {
+            content: "";
+            position: absolute;
+            height: 35px;
+            width: 150px;
+            background-color: #fdbf00;
+            left: -65px;
+            top: 160px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .controls {
+            margin-top: 380px;
+        }
+
+        .controls button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Fan Control System</h1>
+        <label for="fanSwitch">
+            <span></span>
+            <span></span>
+            <span></span>
+        </label>
+        <div class="base"></div>
+        <div class="controls">
+            <button onclick="toggleFan()">Turn On/Off</button>
+            <button onclick="setSpeed('low')">Low Speed</button>
+            <button onclick="setSpeed('medium')">Medium Speed</button>
+            <button onclick="setSpeed('high')">High Speed</button>
+            <button onclick="startVoiceControl()">Start Voice Control</button>
+            <button onclick="stopVoiceControl()">Stop Voice Control</button>
+            <p id="status">Status: Off</p>
+        </div>
+    </div>
+    <script>
+        let fanStatus = false;
+        let fanSpeed = '';
+        let recognition;
+        let recognizing = false;
+
+        function toggleFan() {
+            fanStatus = !fanStatus;
+            if (!fanStatus) {
+                fanSpeed = '';
+            }
+            updateFan();
+        }
+
+        function setSpeed(speed) {
+            const fanLabel = document.querySelector('label');
+            fanSpeed = speed;
+            fanStatus = true;
+            if (speed === 'low') {
+                fanLabel.style.animationDuration = '2s';
+            } else if (speed === 'medium') {
+                fanLabel.style.animationDuration = '1s';
+            } else if (speed === 'high') {
+                fanLabel.style.animationDuration = '0.5s';
+            }
+            updateFan();
+        }
+
+        function updateFan() {
+            const status = document.getElementById('status');
+            const fanLabel = document.querySelector('label');
+            if (fanStatus) {
+                fanLabel.style.animationPlayState = 'running';
+                status.textContent = `Status: On (${fanSpeed} speed)`;
+            } else {
+                fanLabel.style.animationPlayState = 'paused';
+                status.textContent = 'Status: Off';
+            }
+        }
+
+        function startVoiceControl() {
+            if (!recognition) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.continuous = true;
+
+                recognition.onstart = function() {
+                    console.log('Voice recognition started');
+                    recognizing = true;
+                };
+
+                recognition.onresult = function(event) {
+                    const command = event.results[0][0].transcript.toLowerCase();
+                    console.log('Recognized command:', command);
+                    if (command.includes('turn on the fan to low speed')) {
+                        fanStatus = true;
+                        setSpeed('low');
+                    } else if (command.includes('turn on the fan to medium speed')) {
+                        fanStatus = true;
+                        setSpeed('medium');
+                    } else if (command.includes('turn on the fan to high speed')) {
+                        fanStatus = true;
+                        setSpeed('high');
+                    } else if (command.includes('turn on')) {
+                        fanStatus = true;
+                        updateFan();
+                    } else if (command.includes('turn off')) {
+                        fanStatus = false;
+                        updateFan();
+                    } else if (command.includes('low speed')) {
+                        setSpeed('low');
+                    } else if (command.includes('medium speed')) {
+                        setSpeed('medium');
+                    } else if (command.includes('high speed')) {
+                        setSpeed('high');
+                    }
+
+                    // Restart recognition after processing the command
+                    recognition.stop();
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error occurred:', event.error);
+                };
+
+                recognition.onend = function() {
+                    console.log('Voice recognition ended');
+                    if (recognizing) {
+                        recognition.start();  // Restart recognition
+                    }
+                };
+            }
+
+            recognition.start();
+        }
+
+        function stopVoiceControl() {
+            if (recognition) {
+                recognizing = false;
+                recognition.stop();
+            }
+        }
+    </script>
+</body>
+</html>
